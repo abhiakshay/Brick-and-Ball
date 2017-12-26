@@ -1,3 +1,4 @@
+//todo: creae ball and paddle separate classes 
 let mCircle = {
     x: 30,
     y: 30,
