@@ -1,24 +1,34 @@
 //todo: creae ball and paddle separate classes 
 let mCircle = {
-    x: 30,
-    y: 30,
-    r: 30,
+    x: 300,
+    y: 300,
+    r: 20,
     cx: 0,
     cy: 0,
-    vx: 5,
-    vy: 5
+    vx: 2,
+    vy: 10
 };
 
-let mBrick = {
+let paddle = {
     x: 360,
-    y: 600,
+    y: 300,
     w: 200,
-    h: 60,
+    h: 20,
     leftBound: 200,
     rightBound: 1000,
     cx: 0,
     cy: 0
 }
+
+let brick = {
+    x: 0,
+    y: 0,
+    w: 150,
+    h: 40,
+    isHit: false
+}
+
+let brickList = [];
 
 const period = 2000; //in ms
 let that;
@@ -36,10 +46,11 @@ class BouncingBall {
         this.continue = true;
         this.addEvent();
         this.setBackground();
+        this.generateBricks(3);
         this.drawBall();
-        mBrick.y = this.canvas.height - mBrick.h;
-        mBrick.rightBound = this.canvas.width - mBrick.w;
-        this.drawBrick();
+        paddle.y = this.canvas.height - paddle.h;
+        paddle.rightBound = this.canvas.width - paddle.w;
+        this.drawPaddle();
         this.calculateCenterPoints();
         this.amplitude = this.centerY - mCircle.r;
         setTimeout(function() {
@@ -48,11 +59,41 @@ class BouncingBall {
         }, 1000);
     }
 
+    generateBricks(n) {
+        for (let i = 0; i < n; i++) {
+            let posX = 0;
+            let posY = i % n * (brick.h + 20);
+            for (let j = 0; j < 4; j++) {
+                posX = j * (brick.w + 20) + 20;
+                let brickObj = Object.create(brick);
+                brickObj.x = posX;
+                brickObj.y = posY;
+                brickList.push(brickObj);
+                this.drawBrick(posX, posY);
+            }
+        }
+    }
+
+    updateBricks() {
+        for (let i = 0; i < brickList.length; i++) {
+            if (!brickList[i].isHit) {
+                this.drawBrick(brickList[i].x, brickList[i].y);
+            }
+        }
+    }
+
+    drawBrick(x, y) {
+        this.stage.beginPath();
+        this.stage.fillStyle = 'blue';
+        this.stage.fillRect(x, y, brick.w, brick.h);
+        this.stage.closePath();
+    }
+
     calculateCenterPoints() {
         mCircle.cx = mCircle.x + mCircle.r;
         mCircle.cy = mCircle.y + mCircle.r;
-        mBrick.cx = mBrick.x + mBrick.w / 2;
-        mBrick.cy = mBrick.y + mBrick.h / 2;
+        paddle.cx = paddle.x + paddle.w / 2;
+        paddle.cy = paddle.y + paddle.h / 2;
     }
 
     addEvent() {
@@ -65,7 +106,7 @@ class BouncingBall {
     }
 
     onMouseMove(evt) {
-        if (evt.clientX <= mBrick.rightBound) mBrick.x = evt.clientX;
+        if (evt.clientX <= paddle.rightBound) paddle.x = evt.clientX;
     }
 
     setBackground() {
@@ -87,17 +128,20 @@ class BouncingBall {
         this.stage.fill();
     }
 
-    drawBrick() {
+    drawPaddle() {
+        this.stage.beginPath();
         this.stage.fillStyle = 'orange';
-        this.stage.fillRect(mBrick.x, mBrick.y, mBrick.w, mBrick.h);
+        this.stage.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+        this.stage.closePath();
     }
 
-    continueGame() {
+    update() {
         this.stage.restore();
         this.stage.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.stage.save();
         this.drawBall();
-        this.drawBrick();
+        this.drawPaddle();
+        this.updateBricks();
     }
 
     endGame() {
@@ -106,38 +150,38 @@ class BouncingBall {
     }
 
     hasCollision() {
-        if (mCircle.x + mCircle.r > mBrick.x &&
-            (mCircle.x - mCircle.r < mBrick.x + mBrick.w) &&
-            mCircle.y + mCircle.r > mBrick.y) {
+        if (mCircle.x + mCircle.r > paddle.x &&
+            (mCircle.x - mCircle.r < paddle.x + paddle.w) &&
+            mCircle.y + mCircle.r > paddle.y) {
             mCircle.vy *= -1;
             mCircle.y += mCircle.vy;
 
-            if (mCircle.x < mBrick.x + mCircle.r || mCircle.x > mBrick.x + mBrick.w) {
+            if (mCircle.x < paddle.x + mCircle.r || mCircle.x > paddle.x + paddle.w) {
                 mCircle.vx *= -1;
                 mCircle.x += mCircle.vx;
             }
         }
     }
 
-    animate() {
-
+    detectWallCollision() {
         if (mCircle.x >= mCircle.r && mCircle.x + mCircle.r < that.canvas.width) {
             mCircle.x += mCircle.vx;
-            that.hasCollision();
         } else {
             mCircle.vx *= -1;
             mCircle.x += mCircle.vx;
         }
         if (mCircle.y >= mCircle.r && mCircle.y + mCircle.r < that.canvas.height) {
             mCircle.y += mCircle.vy;
-            that.hasCollision();
         } else {
             mCircle.vy *= -1;
             mCircle.y += mCircle.vy;
         }
+    }
 
-
-        that.continueGame();
+    animate() {
+        that.detectWallCollision();
+        that.hasCollision();
+        that.update();
         // request new frame
         requestAnimFrame(() => that.animate());
     }
